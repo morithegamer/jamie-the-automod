@@ -1,87 +1,71 @@
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 import re
-import json
-import os
 
 class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.load_settings()
-
-    def load_settings(self):
-        if os.path.exists("settings.json"):
-            with open("settings.json", "r") as f:
-                self.settings = json.load(f)
-        else:
-            self.settings = {
-                "spam_threshold": 5,
-                "warn_threshold": 3,
-                "mute_threshold": 5,
-                "kick_threshold": 7,
-                "ban_threshold": 10,
-                "log_channel": None,
-                "banned_words": [],
-                "regex_filters": []
-            }
+        self.regex_filters = [
+            r"https?://.*steamunlocked\.net.*", 
+            r"https?://.*free-steam-games\.com.*",
+            r"https?://.*epicfreegames\.com.*",
+            r"https?://.*giftcardgenerator\.com.*",
+            r"https?://.*freerobux\.com.*",
+        ]
+        self.nsfw_keywords = ["porn", "xxx", "hentai", "nsfw", "lewd"]
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
             return
 
-        # Spam Detection (5 messages in 10 seconds)
-        await self.check_spam(message)
-
-        # Banned Words Detection
-        for word in self.settings["banned_words"]:
-            if word.lower() in message.content.lower():
-                await message.delete()
-                await self.warn_user(message.author, message.guild)
-                return
-
-        # Regex Filtering
-        for pattern in self.settings["regex_filters"]:
+        # Phishing Detection
+        for pattern in self.regex_filters:
             if re.search(pattern, message.content):
                 await message.delete()
-                await self.warn_user(message.author, message.guild)
+                await message.channel.send(f"{message.author.mention}, this link is blocked for safety.")
                 return
 
-    async def check_spam(self, message):
-        author_id = str(message.author.id)
-        if author_id not in self.settings.get("user_warnings", {}):
-            self.settings["user_warnings"][author_id] = {"warnings": 0, "messages": []}
+        # NSFW Link Detection
+        for keyword in self.nsfw_keywords:
+            if keyword in message.content.lower():
+                await message.delete()
+                await message.channel.send(f"{message.author.mention}, NSFW content is not allowed.")
+                return
 
-        self.settings["user_warnings"][author_id]["messages"].append(message.created_at.timestamp())
+    @app_commands.command(name="addregex", description="Add a regex filter to block links or patterns.")
+    async def add_regex(self, interaction: discord.Interaction, pattern: str):
+        if pattern not in self.regex_filters:
+            self.regex_filters.append(pattern)
+            await interaction.response.send_message(f"✅ Added regex filter: `{pattern}`")
+        else:
+            await interaction.response.send_message(f"⚠️ That regex filter is already in use.")
 
-        # Remove old messages (10 seconds)
-        self.settings["user_warnings"][author_id]["messages"] = [
-            t for t in self.settings["user_warnings"][author_id]["messages"] 
-            if (message.created_at.timestamp() - t) <= 10
-        ]
+    @app_commands.command(name="removeregex", description="Remove a regex filter.")
+    async def remove_regex(self, interaction: discord.Interaction, pattern: str):
+        if pattern in self.regex_filters:
+            self.regex_filters.remove(pattern)
+            await interaction.response.send_message(f"✅ Removed regex filter: `{pattern}`")
+        else:
+            await interaction.response.send_message(f"❌ Regex filter not found.")
 
-        if len(self.settings["user_warnings"][author_id]["messages"]) > self.settings["spam_threshold"]:
-            await self.warn_user(message.author, message.guild)
-            self.settings["user_warnings"][author_id]["messages"] = []
+    @app_commands.command(name="phishinglist", description="View all blocked phishing domains.")
+    async def phishing_list(self, interaction: discord.Interaction):
+        if self.regex_filters:
+            await interaction.response.send_message(f"🚨 Blocked Phishing Domains:
+" + "
+".join(self.regex_filters))
+        else:
+            await interaction.response.send_message("✅ No phishing domains are currently blocked.")
 
-    async def warn_user(self, user, guild):
-        author_id = str(user.id)
-        if author_id not in self.settings.get("user_warnings", {}):
-            self.settings["user_warnings"][author_id] = {"warnings": 0}
-
-        self.settings["user_warnings"][author_id]["warnings"] += 1
-
-        if self.settings["log_channel"]:
-            log_channel = self.bot.get_channel(self.settings["log_channel"])
-            if log_channel:
-                await log_channel.send(f"{user.mention} warned. Warnings: {self.settings['user_warnings'][author_id]['warnings']}")
-
-        self.save_settings()
-
-    def save_settings(self):
-        with open("settings.json", "w") as f:
-            json.dump(self.settings, f)
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.bot.tree.add_command(self.add_regex)
+        self.bot.tree.add_command(self.remove_regex)
+        self.bot.tree.add_command(self.phishing_list)
+        print("✅ AutoMod Regex and NSFW Slash Commands Registered.")
 
 async def setup(bot):
     await bot.add_cog(AutoMod(bot))

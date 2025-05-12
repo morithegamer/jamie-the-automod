@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 import os
@@ -15,12 +14,15 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def load_cogs():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
-            await bot.load_extension(f"cogs.{filename[:-3]}")
-            print(f"Loaded: {filename}")
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                print(f"✅ Loaded: {filename}")
+            except Exception as e:
+                print(f"❌ Error loading {filename}: {e}")
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print(f"✅ Logged in as {bot.user}")
     await bot.change_presence(
         activity=discord.Game(name="Jamie Being a Cute Automod~"),
         status=discord.Status.online
@@ -33,8 +35,11 @@ async def on_ready():
 
 async def main():
     try:
+        print("🚀 Starting Jamie...")
         await load_cogs()
         await bot.start(os.getenv("DISCORD_TOKEN"))
+    except discord.LoginFailure:
+        print("❌ ERROR: Invalid Discord Token. Please check your .env file.")
     except Exception as e:
         print(f"🚨 Critical Error: {e}")
 

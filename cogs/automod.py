@@ -54,9 +54,10 @@ class AutoMod(commands.Cog):
     @app_commands.command(name="phishinglist", description="View all blocked phishing domains.")
     async def phishing_list(self, interaction: discord.Interaction):
         if self.regex_filters:
+            filters_list = "
+".join(self.regex_filters)
             await interaction.response.send_message(f"🚨 Blocked Phishing Domains:
-" + "
-".join(self.regex_filters))
+```{filters_list}```")
         else:
             await interaction.response.send_message("✅ No phishing domains are currently blocked.")
 

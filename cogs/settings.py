@@ -1,26 +1,31 @@
 
 import discord
 from discord.ext import commands
+import json
+import os
 
 class Settings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.settings = {
-            "spam_threshold": 5,
-            "warn_threshold": 3,
-            "banned_words": ["badword"],
-            "log_channel": None
-        }
+        self.settings_file = "settings.json"
+        self.settings = self.load_settings()
+
+    def load_settings(self):
+        if os.path.exists(self.settings_file):
+            with open(self.settings_file, "r") as f:
+                return json.load(f)
+        else:
+            return {"log_channel": None}
+
+    def save_settings(self):
+        with open(self.settings_file, "w") as f:
+            json.dump(self.settings, f)
 
     @commands.command()
-    @commands.has_permissions(administrator=True)
     async def setlog(self, ctx, channel: discord.TextChannel):
         self.settings["log_channel"] = channel.id
-        await ctx.send(f"Logging channel set to {channel.mention}.")
-
-    @commands.command()
-    async def settings(self, ctx):
-        await ctx.send(str(self.settings))
+        self.save_settings()
+        await ctx.send(f"✅ Logging channel set to {channel.mention}.")
 
 async def setup(bot):
     await bot.add_cog(Settings(bot))

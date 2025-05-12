@@ -1,1 +1,1 @@
-{"spam_threshold": 5, "warn_threshold": 3, "mute_threshold": 5, "kick_threshold": 7, "ban_threshold": 10, "log_channel": null, "banned_words": [], "regex_filters": [], "user_warnings": {}}
+{"log_channel": null}

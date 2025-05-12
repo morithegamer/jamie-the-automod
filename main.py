@@ -25,10 +25,17 @@ async def on_ready():
         activity=discord.Game(name="Jamie Being a Cute Automod~"),
         status=discord.Status.online
     )
+    try:
+        await bot.tree.sync()
+        print("✅ Slash Commands Synced.")
+    except Exception as e:
+        print(f"❌ Error syncing Slash Commands: {e}")
 
 async def main():
-    await load_cogs()
-    await bot.start(os.getenv("DISCORD_TOKEN"))
+    try:
+        await load_cogs()
+        await bot.start(os.getenv("DISCORD_TOKEN"))
+    except Exception as e:
+        print(f"🚨 Critical Error: {e}")
 
-# Run the bot using asyncio.run for full compatibility
 asyncio.run(main())

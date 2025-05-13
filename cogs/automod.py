@@ -1,10 +1,9 @@
 
 import discord
-from discord import app_commands
 from discord.ext import commands
-import re
 import json
 import os
+import re
 
 class AutoMod(commands.Cog):
     def __init__(self, bot):
@@ -15,50 +14,31 @@ class AutoMod(commands.Cog):
     def load_settings(self):
         if os.path.exists(self.settings_file):
             with open(self.settings_file, "r") as f:
-                settings = json.load(f)
-                self.nsfw_keywords = settings.get("nsfw_keywords", [])
-                self.phishing_domains = settings.get("phishing_domains", [])
+                self.settings = json.load(f)
         else:
-            self.nsfw_keywords = ["porn", "xxx", "hentai", "nsfw", "lewd"]
-            self.phishing_domains = [
-                r"https?://.*steamunlocked\.net.*",
-                r"https?://.*free-steam-games\.com.*",
-                r"https?://.*epicfreegames\.com.*",
-                r"https?://.*giftcardgenerator\.com.*",
-                r"https?://.*freerobux\.com.*"
-            ]
+            self.settings = {
+                "nsfw_keywords": [],
+                "phishing_domains": [],
+                "regex_patterns": [r"(https?://[^\s]+)"],
+                "mention_limit": 5,
+                "safe_mode": False,
+                "anti_raid_threshold": 5
+            }
+            self.save_settings()
+
+    def save_settings(self):
+        with open(self.settings_file, "w") as f:
+            json.dump(self.settings, f, indent=4)
 
     @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-
-        # ✅ Ensure the NSFW filter ONLY works in non-NSFW Channels
-        if message.channel.is_nsfw():
-            return  # Skip filtering in NSFW channels (Age-Restricted)
-
-        # NSFW Detection (Direct from settings.json)
-        for keyword in self.nsfw_keywords:
-            if keyword.lower() in message.content.lower():
-                await message.delete()
-                await message.channel.send(
-                    f"{message.author.mention}, NSFW content is not allowed in this channel."
-                )
-                return
-
-        # Phishing Detection (Dynamic from settings.json)
-        for pattern in self.phishing_domains:
-            if re.search(pattern, message.content):
-                await message.delete()
-                await message.channel.send(
-                    f"{message.author.mention}, this link is blocked for safety."
-                )
-                return
-
-    @app_commands.command(name="reloadsettings", description="Reload settings (NSFW Keywords & Phishing) without restarting.")
-    async def reload_settings(self, interaction: discord.Interaction):
-        self.load_settings()
-        await interaction.response.send_message("✅ Settings reloaded.")
+    async def on_member_join(self, member):
+        if self.settings.get("anti_raid_threshold"):
+            guild = member.guild
+            join_times = getattr(guild, "join_times", [])
+            join_times.append(member.joined_at.timestamp())
+            guild.join_times = join_times[-10:]
+            if len(join_times) >= self.settings["anti_raid_threshold"]:
+                await guild.system_channel.send("🚨 Possible Raid Detected!")
 
 async def setup(bot):
     await bot.add_cog(AutoMod(bot))

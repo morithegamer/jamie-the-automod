@@ -1,0 +1,17 @@
+{
+    "log_channel": null,
+    "nsfw_keywords": [
+        "porn",
+        "xxx",
+        "hentai",
+        "nsfw",
+        "lewd"
+    ],
+    "phishing_domains": [
+        "https?://.*steamunlocked\\\\.net.*",
+        "https?://.*free-steam-games\\\\.com.*",
+        "https?://.*epicfreegames\\\\.com.*",
+        "https?://.*giftcardgenerator\\\\.com.*",
+        "https?://.*freerobux\\\\.com.*"
+    ]
+}

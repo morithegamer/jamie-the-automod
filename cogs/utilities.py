@@ -13,16 +13,24 @@ class Utilities(commands.Cog):
     @commands.command(name="userinfo")
     async def userinfo(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        await ctx.send(f"User Info for {member}:
-ID: {member.id}
-Joined: {member.joined_at}")
+        await ctx.send(
+            f"User Info for {member}:
+"
+            f"ID: {member.id}
+"
+            f"Joined: {member.joined_at}"
+        )
 
     @commands.command(name="serverinfo")
     async def serverinfo(self, ctx):
         guild = ctx.guild
-        await ctx.send(f"Server Info:
-Name: {guild.name}
-Members: {guild.member_count}")
+        await ctx.send(
+            f"Server Info:
+"
+            f"Name: {guild.name}
+"
+            f"Members: {guild.member_count}"
+        )
 
 async def setup(bot):
     await bot.add_cog(Utilities(bot))

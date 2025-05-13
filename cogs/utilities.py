@@ -13,24 +13,18 @@ class Utilities(commands.Cog):
     @commands.command(name="userinfo")
     async def userinfo(self, ctx, member: discord.Member = None):
         member = member or ctx.author
-        await ctx.send(
-            f"User Info for {member}:
-"
-            f"ID: {member.id}
-"
-            f"Joined: {member.joined_at}"
-        )
+        embed = discord.Embed(title=f"User Info for {member}", color=0x00ff00)
+        embed.add_field(name="ID", value=member.id, inline=False)
+        embed.add_field(name="Joined", value=member.joined_at.strftime("%Y-%m-%d"), inline=False)
+        await ctx.send(embed=embed)
 
     @commands.command(name="serverinfo")
     async def serverinfo(self, ctx):
         guild = ctx.guild
-        await ctx.send(
-            f"Server Info:
-"
-            f"Name: {guild.name}
-"
-            f"Members: {guild.member_count}"
-        )
+        embed = discord.Embed(title=f"Server Info: {guild.name}", color=0x00ff00)
+        embed.add_field(name="Members", value=guild.member_count, inline=False)
+        embed.add_field(name="Owner", value=guild.owner, inline=False)
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Utilities(bot))

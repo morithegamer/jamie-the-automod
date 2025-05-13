@@ -1,1 +1,10 @@
-{"log_channel": null}
+{
+    "log_channel": null,
+    "nsfw_keywords": [
+        "porn",
+        "xxx",
+        "hentai",
+        "nsfw",
+        "lewd"
+    ]
+}

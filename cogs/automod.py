@@ -3,26 +3,51 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import re
+import json
+import os
 
 class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.regex_filters = [
-            r"https?://.*steamunlocked\.net.*",
-            r"https?://.*free-steam-games\.com.*",
-            r"https?://.*epicfreegames\.com.*",
-            r"https?://.*giftcardgenerator\.com.*",
-            r"https?://.*freerobux\.com.*"
-        ]
-        self.nsfw_keywords = ["porn", "xxx", "hentai", "nsfw", "lewd"]
+        self.settings_file = "settings.json"
+        self.load_settings()
+
+    def load_settings(self):
+        if os.path.exists(self.settings_file):
+            with open(self.settings_file, "r") as f:
+                settings = json.load(f)
+                self.nsfw_keywords = settings.get("nsfw_keywords", [])
+                self.phishing_domains = settings.get("phishing_domains", [])
+        else:
+            self.nsfw_keywords = ["porn", "xxx", "hentai", "nsfw", "lewd"]
+            self.phishing_domains = [
+                r"https?://.*steamunlocked\.net.*",
+                r"https?://.*free-steam-games\.com.*",
+                r"https?://.*epicfreegames\.com.*",
+                r"https?://.*giftcardgenerator\.com.*",
+                r"https?://.*freerobux\.com.*"
+            ]
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
             return
 
-        # Phishing Detection (Safe Regex Handling)
-        for pattern in self.regex_filters:
+        # ✅ Ensure the NSFW filter ONLY works in non-NSFW Channels
+        if message.channel.is_nsfw():
+            return  # Skip filtering in NSFW channels (Age-Restricted)
+
+        # NSFW Detection (Direct from settings.json)
+        for keyword in self.nsfw_keywords:
+            if keyword.lower() in message.content.lower():
+                await message.delete()
+                await message.channel.send(
+                    f"{message.author.mention}, NSFW content is not allowed in this channel."
+                )
+                return
+
+        # Phishing Detection (Dynamic from settings.json)
+        for pattern in self.phishing_domains:
             if re.search(pattern, message.content):
                 await message.delete()
                 await message.channel.send(
@@ -30,40 +55,10 @@ class AutoMod(commands.Cog):
                 )
                 return
 
-        # NSFW Link Detection
-        for keyword in self.nsfw_keywords:
-            if keyword in message.content.lower():
-                await message.delete()
-                await message.channel.send(
-                    f"{message.author.mention}, NSFW content is not allowed."
-                )
-                return
-
-    @app_commands.command(name="addregex", description="Add a regex filter to block links or patterns.")
-    async def add_regex(self, interaction: discord.Interaction, pattern: str):
-        if pattern not in self.regex_filters:
-            self.regex_filters.append(pattern)
-            await interaction.response.send_message(f"✅ Added regex filter: `{pattern}`")
-        else:
-            await interaction.response.send_message(f"⚠️ That regex filter is already in use.")
-
-    @app_commands.command(name="removeregex", description="Remove a regex filter.")
-    async def remove_regex(self, interaction: discord.Interaction, pattern: str):
-        if pattern in self.regex_filters:
-            self.regex_filters.remove(pattern)
-            await interaction.response.send_message(f"✅ Removed regex filter: `{pattern}`")
-        else:
-            await interaction.response.send_message(f"❌ Regex filter not found.")
-
-    @app_commands.command(name="phishinglist", description="View all blocked phishing domains.")
-    async def phishing_list(self, interaction: discord.Interaction):
-        if self.regex_filters:
-            filters_list = "\n".join(self.regex_filters)
-            await interaction.response.send_message(
-                f"🚨 Blocked Phishing Domains:\n```{filters_list}```"
-            )
-        else:
-            await interaction.response.send_message("✅ No phishing domains are currently blocked.")
+    @app_commands.command(name="reloadsettings", description="Reload settings (NSFW Keywords & Phishing) without restarting.")
+    async def reload_settings(self, interaction: discord.Interaction):
+        self.load_settings()
+        await interaction.response.send_message("✅ Settings reloaded.")
 
 async def setup(bot):
     await bot.add_cog(AutoMod(bot))
